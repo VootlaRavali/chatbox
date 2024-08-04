@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Chat Application</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <h1>Real-Time Chat Application</h1>
+        <div id="login-container">
+            <input type="text" id="username-input" placeholder="Enter username">
+            <button id="login-button">Login</button>
+        </div>
+        <div id="chat-container" style="display: none;">
+            <div id="user-list"></div>
+            <div id="chat-room">
+                <div id="messages"></div>
+                <input type="file" id="file-input">
+                <input type="text" id="message-input" placeholder="Type a message...">
+                <button id="send-button">Send</button>
+                <button id="join-button">Join Chat</button>
+                <button id="exit-button">Exit Chat</button>
+                <button id="history-button">Chat History</button>
+                <button id="logout-button">Logout</button>
+            </div>
+            
+        </div>
+        
+        
+    </div>
+    <script>
+        const socket = new WebSocket('ws://localhost:3000');
+        let username = '';
+        let room = 'default';
+
+        socket.onopen = () => {
+            console.log('Connected to the server');
+        };
+
+        socket.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            displayMessage(message);
+        };
+
+        document.getElementById('login-button').addEventListener('click', () => {
+            username = document.getElementById('username-input').value;
+            if (username) {
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('chat-container').style.display = 'flex';
+                socket.send(JSON.stringify({ type: 'login', username }));
+            }
+        });
+
+        document.getElementById('send-button').addEventListener('click', () => {
+            const messageInput = document.getElementById('message-input');
+            const fileInput = document.getElementById('file-input');
+            const message = {
+                type: 'message',
+                username,
+                text: messageInput.value,
+                file: fileInput.files[0] ? fileInput.files[0].name : null,
+                room
+            };
+            socket.send(JSON.stringify(message));
+            messageInput.value = '';
+            fileInput.value = '';
+            alert('Message sent!');
+        });
+
+        document.getElementById('join-button').addEventListener('click', () => {
+            socket.send(JSON.stringify({ type: 'join', username, room }));
+            alert('Joined the chat room!');
+        });
+
+        document.getElementById('exit-button').addEventListener('click', () => {
+            socket.send(JSON.stringify({ type: 'exit', username, room }));
+            alert('Exited the chat room!');
+        });
+
+        document.getElementById('history-button').addEventListener('click', () => {
+            socket.send(JSON.stringify({ type: 'history', username, room }));
+        });
+
+        document.getElementById('logout-button').addEventListener('click', () => {
+            socket.send(JSON.stringify({ type: 'logout', username }));
+            alert('You have logged out!');
+            document.getElementById('login-container').style.display = 'block';
+            document.getElementById('chat-container').style.display = 'none';
+        });
+
+        function displayMessage(message) {
+            const messagesDiv = document.getElementById('messages');
+            const messageElement = document.createElement('div');
+            messageElement.textContent = `${message.username}: ${message.text}`;
+            if (message.file) {
+                const fileElement = document.createElement('a');
+                fileElement.href = `/uploads/${message.file}`;
+                fileElement.textContent = message.file;
+                messageElement.appendChild(fileElement);
+            }
+            messagesDiv.appendChild(messageElement);
+        }
+    </script>
+</body>
+</html>
